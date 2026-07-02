@@ -3,6 +3,7 @@ import math
 import os
 
 import numpy as np
+import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -68,6 +69,9 @@ def train_one_fold(df, cfg, fold, device="cuda"):
     total_steps = cfg.epochs * len(train_ld)
     warmup_steps = cfg.warmup_epochs * len(train_ld)
     best_qwk, best_path = -1.0, os.path.join(cfg.output_dir, f"best_fold{fold}.pt")
+    history = []                       # per-epoch metrics for overfitting curves
+    hist_csv = os.path.join(cfg.output_dir, f"history_fold{fold}.csv")
+    curves_png = os.path.join(cfg.output_dir, f"curves_fold{fold}.png")
     step = 0
 
     for epoch in range(cfg.epochs):
@@ -101,12 +105,26 @@ def train_one_fold(df, cfg, fold, device="cuda"):
         # --- validate (use EMA weights) ---
         eval_model = ema.ema if ema else model
         scores, targets = predict_scores(eval_model, valid_ld, device, tta=cfg.tta)
+        # val loss (same criterion as training) -> the overfitting signal
+        val_loss = criterion(torch.from_numpy(scores).float(),
+                             torch.from_numpy(targets).float()).item()
         rounder = OptimizedRounder(cfg.num_classes).fit(scores, targets)
         preds = rounder.predict(scores)
         qwk = quadratic_weighted_kappa(targets, preds)
         acc = accuracy_score(targets, preds)
-        print(f"  fold{fold} ep{epoch+1}: val QWK={qwk:.4f}  acc={acc:.4f}  "
-              f"thresholds={np.round(rounder.coef_,3)}")
+        print(f"  fold{fold} ep{epoch+1}: train_loss={loss_m.avg:.4f}  "
+              f"val_loss={val_loss:.4f}  val QWK={qwk:.4f}  acc={acc:.4f}")
+
+        # record + persist history, refresh the curve PNG every epoch so you can
+        # download it mid-run and watch for train/val loss divergence.
+        history.append({"epoch": epoch + 1, "train_loss": loss_m.avg,
+                        "val_loss": val_loss, "val_qwk": qwk, "val_acc": acc})
+        pd.DataFrame(history).to_csv(hist_csv, index=False)
+        try:
+            from .plots import plot_history
+            plot_history(history, curves_png, fold=fold)
+        except Exception as e:
+            print(f"  (plot skipped: {e})")
 
         # QWK is the competition metric -> use it for model selection,
         # but accuracy is tracked/saved too since you care about all three.
@@ -120,4 +138,5 @@ def train_one_fold(df, cfg, fold, device="cuda"):
             print(f"  saved {best_path} (QWK={qwk:.4f}  acc={acc:.4f})")
 
     print(f"fold{fold} best QWK = {best_qwk:.4f}")
+    print(f"  history -> {hist_csv}\n  curves  -> {curves_png}")
     return best_qwk, best_path

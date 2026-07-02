@@ -18,7 +18,7 @@ python -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is
 echo "==> [2/5] Core Python deps"
 pip install -q -U pip
 pip install -q timm==0.9.16 albumentations==1.4.0 opencv-python-headless \
-    pandas scikit-learn scipy tqdm kaggle
+    pandas scikit-learn scipy tqdm kaggle matplotlib
 
 echo "==> [3/5] Fast selective-scan CUDA kernels (causal-conv1d + mamba-ssm)"
 # Prefer the pinned versions (prebuilt wheels exist for torch 2.1-2.4 / cu12x /

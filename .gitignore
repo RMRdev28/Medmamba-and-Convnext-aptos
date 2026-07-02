@@ -1,2 +1,19 @@
-/__pycache__
-/.claude
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.claude/
+
+# data & outputs (these live on the pod / volume, never in git)
+/data/
+*.zip
+*.pt
+*.pth
+cache/
+out/
+/workspace/
+
+# editor / os junk
+New Text Document.txt
+.DS_Store
