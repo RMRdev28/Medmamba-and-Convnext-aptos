@@ -1,0 +1,18 @@
+# Core (Kaggle T4 images already ship torch/torchvision + cuda 12.x)
+torch>=2.1
+torchvision>=0.16
+timm>=0.9.16
+albumentations>=1.4.0
+opencv-python-headless>=4.8
+pandas>=2.0
+numpy>=1.24
+scikit-learn>=1.3
+scipy>=1.10
+tqdm>=4.66
+
+# Optional: fast selective-scan CUDA kernels for the Mamba branch.
+# On Kaggle run:  pip install causal-conv1d==1.4.0 mamba-ssm==2.2.2
+# If these fail to build, the code automatically falls back to a
+# pure-PyTorch selective scan (correct, just slower). See src/models/vss.py.
+# causal-conv1d>=1.2
+# mamba-ssm>=2.0
